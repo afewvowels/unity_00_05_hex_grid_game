@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class HexGrid : MonoBehaviour
@@ -12,11 +14,33 @@ public class HexGrid : MonoBehaviour
 	public Color defaultColor = Color.white;
 
 	private Canvas gridCanvas;
+	private bool isFound;
 
-	private HexCell[] cells;
-	private HexMesh hexMesh;
+	public HexCell[] cells;
+	public HexMesh hexMesh;
+
+	private int moves = 10;
+	private float color = 0.0f;
+
+	public List<HexCell> sortedHexes;
+	public List<HexCell> path;
+
+	public GameObject playerObject;
 
 	private void Awake()
+	{
+		InitializeHexGrid();
+	}
+
+	private void Start()
+	{
+		hexMesh.Triangulate(cells);
+		isFound = false;
+		sortedHexes = new List<HexCell>();
+		path = new List<HexCell>();
+	}
+
+	public void InitializeHexGrid()
 	{
 		gridCanvas = GetComponentInChildren<Canvas>();
 		hexMesh = GetComponentInChildren<HexMesh>();
@@ -32,11 +56,6 @@ public class HexGrid : MonoBehaviour
 		}
 	}
 
-	private void Start()
-	{
-		hexMesh.Triangulate(cells);
-	}
-
 	void CreateCell(int x, int z, int i)
 	{
 
@@ -50,7 +69,8 @@ public class HexGrid : MonoBehaviour
 		cell.transform.SetParent(transform, false);
 		cell.transform.localPosition = position;
 		cell.coordinates = HexCoordinates.FromOffsetCoordinates(x, z);
-		cell.hexColor = defaultColor;
+		cell.SetCellID(i);
+		//cell.hexColor = defaultColor;
 
 		if (x > 0)
 		{
@@ -76,7 +96,7 @@ public class HexGrid : MonoBehaviour
 			}
 		}
 
-		CreateLabel(x, z, position, cell);
+		//CreateLabel(x, z, position, cell);
 	}
 
 	void CreateLabel(int x, int z, Vector3 position, HexCell cell)
@@ -85,7 +105,9 @@ public class HexGrid : MonoBehaviour
 		label.rectTransform.SetParent(gridCanvas.transform, false);
 		label.rectTransform.anchoredPosition =
 			new Vector2(position.x, position.z);
-		label.text = cell.coordinates.ToStringOnSeparateLines();
+		//label.text = cell.coordinates.ToStringOnSeparateLines();
+		label.tag = "label";
+		label.text = cell.GetDjikstraCost().ToString(); ;
 	}
 
 	public void ColorCell(Vector3 position, Color color)
@@ -103,6 +125,16 @@ public class HexGrid : MonoBehaviour
 		Debug.Log("touched at " + coordinates.ToString());
 	}
 
+	public HexCell GetClickedCell(Vector3 position)
+	{
+		position = transform.InverseTransformPoint(position);
+		HexCoordinates coordinates = HexCoordinates.FromPosition(position);
+		int index = coordinates.X + coordinates.Z * width + coordinates.Z / 2;
+		HexCell cell = cells[index];
+
+		return cell;
+	}
+
 	public void MoveObject(Vector3 position, GameObject go)
 	{
 		position = transform.InverseTransformPoint(position);
@@ -113,17 +145,86 @@ public class HexGrid : MonoBehaviour
 		Debug.Log("moved");
 	}
 
-	//public HexCell[] FindAdjacentCells(HexCell cell)
-	//{
-	//	HexCell[] adjCells;
-
-
-
-	//	return adjCells;
-	//}
-
-	public void FindPath(HexCell start, HexCell destination)
+	public void FindPath(HexCell destination)
 	{
+		int index = 0;
+		sortedHexes = sortedHexes.OrderBy(x => x.GetDjikstraCost()).ToList();
 
+		//foreach (HexCell cell in sortedHexes)
+		//{
+		//	Debug.Log("Hex cell id: " + cell.GetCellID() + ", Djikstra cost: " + cell.GetDjikstraCost());
+		//}
+
+		HexCell activeCell = sortedHexes[index];
+		sortedHexes.RemoveAt(index);
+
+		Debug.Log("cell id: " + activeCell.GetCellID() + ", djikstra cost: " + activeCell.GetDjikstraCost());
+		activeCell.SetDjikstraBlack();
+		foreach (HexCell neighbor in activeCell.GetNeighbors())
+		{
+			if (neighbor != null && neighbor.GetDjikstraColor() != HexCell.DjikstraColor.black)
+			{
+				int newCost = activeCell.GetDjikstraCost() + neighbor.GetMoveCost();
+
+				if (newCost < neighbor.GetDjikstraCost() && !isFound && neighbor.GetDjikstraColor() != HexCell.DjikstraColor.black)
+				{
+					neighbor.SetDjikstraGrey();
+					neighbor.SetDjikstraCost(newCost);
+					neighbor.SetParentCellID(activeCell.GetCellID());
+					//CreateLabel(0, 0, neighbor.transform.position, neighbor);
+					if (neighbor.GetCellID() == destination.GetCellID())
+					{
+						BuildArray(destination);
+						FollowPath();
+						isFound = true;
+					}
+					else
+					{
+						sortedHexes.Add(neighbor);
+					}
+				}
+			}
+		}
+
+		hexMesh.Triangulate(cells);
+
+		if (!isFound)
+		{
+			FindPath(destination);
+		}
+	}
+
+	public void BuildArray(HexCell destination)
+	{
+		path.Clear();
+		path.Add(destination);
+
+		HexCell tempCell = cells[destination.GetParentCellID()];
+
+		path.Add(tempCell);
+
+		while (tempCell.GetCellID() != tempCell.GetParentCellID())
+		{
+			tempCell = cells[tempCell.GetParentCellID()];
+			path.Add(tempCell);
+		}
+	}
+
+	public void FollowPath()
+	{
+		for (int i = 0; i < path.Count; i++)
+		{
+			CreateLabel(0, 0, path[i].transform.position, path[i]);
+			//playerObject.transform.LookAt(path[i - 1].transform.position);
+			//playerObject.transform.position = path[i].transform.position;
+			//float timer = 0.0f;
+
+			//while (timer <= 1.0f)
+			//{
+			//	timer += Time.deltaTime;
+			//}
+			cells[path[i].GetCellID()].hexColor = Color.white;
+		}
+		hexMesh.Triangulate(cells);
 	}
 }
