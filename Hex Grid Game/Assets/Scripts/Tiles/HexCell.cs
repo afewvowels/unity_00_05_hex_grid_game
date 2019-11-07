@@ -7,7 +7,10 @@ public class HexCell : MonoBehaviour
 
 	public int startCellID;
 
+	[SerializeField]
 	private DjikstraColor color;
+
+	[SerializeField]
 	private int djikstraCost;
 
 	[SerializeField]
@@ -97,6 +100,7 @@ public class HexCell : MonoBehaviour
 	{
 		djikstraCost = 0;
 		SetDjikstraGrey();
+		parentCellID = cellID;
 	}
 
 	public int GetDjikstraCost()
@@ -123,6 +127,7 @@ public class HexCell : MonoBehaviour
 	{
 		color = DjikstraColor.white;
 		djikstraCost = 9999;
+		parentCellID = cellID;
 	}
 
 	public void SetParentCellID(int id)

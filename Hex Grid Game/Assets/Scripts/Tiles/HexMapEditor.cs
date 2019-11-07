@@ -11,6 +11,8 @@ public class HexMapEditor : MonoBehaviour
 
 	private HexCell start, destination;
 
+	public GameObject player;
+
 	private void Awake()
 	{
 		SelectColor(0);
@@ -68,7 +70,7 @@ public class HexMapEditor : MonoBehaviour
 				start.SetParentCellID(start.GetCellID());
 				hexGrid.sortedHexes.Add(start);
 				hexGrid.FindPath(destination);
-				hexGrid.FollowPath();
+				//hexGrid.FollowPath();
 				start = null;
 				destination = null;
 			}

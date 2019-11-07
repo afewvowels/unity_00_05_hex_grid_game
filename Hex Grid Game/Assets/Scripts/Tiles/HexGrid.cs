@@ -19,13 +19,12 @@ public class HexGrid : MonoBehaviour
 	public HexCell[] cells;
 	public HexMesh hexMesh;
 
-	private int moves = 10;
-	private float color = 0.0f;
-
 	public List<HexCell> sortedHexes;
 	public List<HexCell> path;
 
-	public GameObject playerObject;
+	public List<int> pathIndexes;
+
+	public GameObject player;
 
 	private void Awake()
 	{
@@ -38,6 +37,18 @@ public class HexGrid : MonoBehaviour
 		isFound = false;
 		sortedHexes = new List<HexCell>();
 		path = new List<HexCell>();
+		pathIndexes = new List<int>();
+		//Instantiate(player, this.GetRandomHexCell().transform.position, new Quaternion(0.0f, 0.0f, 0.0f, 0.0f));
+	}
+
+	public HexCell GetHexCellByID(int id)
+	{
+		return cells[id];
+	}
+
+	public HexCell GetRandomHexCell()
+	{
+		return cells[Mathf.RoundToInt(Random.Range(0.0f, width * height - 1.0f))];
 	}
 
 	public void InitializeHexGrid()
@@ -58,7 +69,6 @@ public class HexGrid : MonoBehaviour
 
 	void CreateCell(int x, int z, int i)
 	{
-
 		Vector3 position;
 		position.x = (x + z * 0.5f - z / 2) * (HexDefinition.innerRadius * 2.0f);
 		position.y = 0.0f;
@@ -70,7 +80,6 @@ public class HexGrid : MonoBehaviour
 		cell.transform.localPosition = position;
 		cell.coordinates = HexCoordinates.FromOffsetCoordinates(x, z);
 		cell.SetCellID(i);
-		//cell.hexColor = defaultColor;
 
 		if (x > 0)
 		{
@@ -105,7 +114,10 @@ public class HexGrid : MonoBehaviour
 		label.rectTransform.SetParent(gridCanvas.transform, false);
 		label.rectTransform.anchoredPosition =
 			new Vector2(position.x, position.z);
+
+		//Paint a label showing coordinates
 		//label.text = cell.coordinates.ToStringOnSeparateLines();
+
 		label.tag = "label";
 		label.text = cell.GetDjikstraCost().ToString(); ;
 	}
@@ -150,11 +162,6 @@ public class HexGrid : MonoBehaviour
 		int index = 0;
 		sortedHexes = sortedHexes.OrderBy(x => x.GetDjikstraCost()).ToList();
 
-		//foreach (HexCell cell in sortedHexes)
-		//{
-		//	Debug.Log("Hex cell id: " + cell.GetCellID() + ", Djikstra cost: " + cell.GetDjikstraCost());
-		//}
-
 		HexCell activeCell = sortedHexes[index];
 		sortedHexes.RemoveAt(index);
 
@@ -186,7 +193,7 @@ public class HexGrid : MonoBehaviour
 			}
 		}
 
-		hexMesh.Triangulate(cells);
+		RedrawGrid();
 
 		if (!isFound)
 		{
@@ -194,37 +201,62 @@ public class HexGrid : MonoBehaviour
 		}
 	}
 
+	public void RedrawGrid()
+	{
+		hexMesh.Triangulate(cells);
+	}
+
 	public void BuildArray(HexCell destination)
 	{
+		Debug.Log("build array");
 		path.Clear();
+		pathIndexes.Clear();
 		path.Add(destination);
+		pathIndexes.Add(destination.GetCellID());
 
 		HexCell tempCell = cells[destination.GetParentCellID()];
 
 		path.Add(tempCell);
+		pathIndexes.Add(tempCell.GetCellID());
 
 		while (tempCell.GetCellID() != tempCell.GetParentCellID())
 		{
 			tempCell = cells[tempCell.GetParentCellID()];
 			path.Add(tempCell);
+			pathIndexes.Add(tempCell.GetCellID());
 		}
+		Debug.Log("finished building array");
 	}
 
 	public void FollowPath()
 	{
-		for (int i = 0; i < path.Count; i++)
-		{
-			CreateLabel(0, 0, path[i].transform.position, path[i]);
-			//playerObject.transform.LookAt(path[i - 1].transform.position);
-			//playerObject.transform.position = path[i].transform.position;
-			//float timer = 0.0f;
+		ColorPath();
+	}
 
-			//while (timer <= 1.0f)
-			//{
-			//	timer += Time.deltaTime;
-			//}
-			cells[path[i].GetCellID()].hexColor = Color.white;
+	public void ColorPath()
+	{
+		for (int i = 0; i < path.Count - 1; i++)
+		{
+			cells[pathIndexes[i]].hexColor = Color.white;
 		}
+		hexMesh.Triangulate(cells);
+	}
+
+	public List<int> GetPathIndexes()
+	{
+		return pathIndexes;
+	}
+
+	public void ResetGrid()
+	{
+		foreach (HexCell cell in cells)
+		{
+			cell.ResetDjikstra();
+			cell.SetColor();
+		}
+		sortedHexes.Clear();
+		path.Clear();
+		pathIndexes.Clear();
 		hexMesh.Triangulate(cells);
 	}
 }

@@ -6,6 +6,7 @@ TagManager:
   tags:
   - hexgrid
   - label
+  - player
   layers:
   - Default
   - TransparentFX
