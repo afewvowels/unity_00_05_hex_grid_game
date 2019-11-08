@@ -5,6 +5,8 @@ public class HexCell : MonoBehaviour
 	public HexCoordinates coordinates;
 	public Color hexColor;
 
+	private bool isOccupied;
+
 	public int startCellID;
 
 	[SerializeField]
@@ -33,6 +35,7 @@ public class HexCell : MonoBehaviour
 			moveCost = 100;
 		}
 		SetColor();
+		SetIsOccupied(false);
 	}
 
 	[SerializeField]
@@ -138,5 +141,15 @@ public class HexCell : MonoBehaviour
 	public int GetParentCellID()
 	{
 		return parentCellID;
+	}
+
+	public bool GetIsOccupied()
+	{
+		return isOccupied;
+	}
+
+	public void SetIsOccupied(bool isOccupied)
+	{
+		this.isOccupied = isOccupied;
 	}
 }

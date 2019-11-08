@@ -4,6 +4,9 @@ using UnityEngine;
 public class UnitInfo : MonoBehaviour
 {
 	[SerializeField]
+	private bool isActive;
+
+	[SerializeField]
 	private int currentHexID;
 
 	[SerializeField]
@@ -15,25 +18,34 @@ public class UnitInfo : MonoBehaviour
 	[SerializeField]
 	private List<HexCell> path;
 
+	[SerializeField]
+	private int movePoints;
+
+
+	public GameObject ring;
+	private GameObject ringInstance;
+
 	private void Start()
 	{
 		hexGrid = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>();
 		hexGridPathfinding = hexGrid.GetComponent<HexGridPathfinding>();
+		SetIsActive(false);
+		movePoints = 10;
 	}
 
 	private void FixedUpdate()
 	{
-		if (Input.GetMouseButtonDown(0))
+		if (isActive && Input.GetMouseButtonDown(0))
 		{
-			HandleClick();
+			SelectDestination();
 		}
-		if (currentHexID != destinationHexID)
+		else if (currentHexID != destinationHexID)
 		{
 			MoveUnit();
 		}
 	}
 
-	public void HandleClick()
+	public void SelectDestination()
 	{
 		Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
 		RaycastHit hit;
@@ -68,6 +80,25 @@ public class UnitInfo : MonoBehaviour
 		destinationHexID = id;
 	}
 
+	public bool GetIsActive()
+	{
+		return isActive;
+	}
+
+	public void SetIsActive(bool isActive)
+	{
+		this.isActive = isActive;
+
+		if (this.isActive)
+		{
+			SelectUnit();
+		}
+		else if (!this.isActive)
+		{
+			DeselectUnit();
+		}
+	}
+
 	private void MoveUnit()
 	{
 		if (path.Count > 0)
@@ -92,5 +123,23 @@ public class UnitInfo : MonoBehaviour
 			currentHexID = destinationHexID;
 			hexGrid.ResetGrid();
 		}
+	}
+
+	public void SelectUnit()
+	{
+		Vector3 pos = this.transform.position + new Vector3(0.0f, 2.0f, 0.0f);
+		ringInstance = (GameObject)Instantiate(ring, pos, this.transform.rotation);
+		ringInstance.transform.SetParent(this.transform);
+		GameObject.FindGameObjectWithTag("unitsroot").GetComponent<UnitActive>().SetActiveUnit(this.gameObject);
+	}
+
+	public void DeselectUnit()
+	{
+		Destroy(ringInstance);
+	}
+
+	public void ResetMovePoints()
+	{
+		movePoints = 10;
 	}
 }

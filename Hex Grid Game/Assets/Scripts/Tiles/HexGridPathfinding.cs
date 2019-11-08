@@ -60,7 +60,7 @@ public class HexGridPathfinding : MonoBehaviour
 		foreach (HexCell neighbor in activeCell.GetNeighbors())
 		{
 			// If the neighbor exists (we could be at the edge of the game board) && we haven't already been there
-			if (neighbor != null && neighbor.GetDjikstraColor() != HexCell.DjikstraColor.black)
+			if (neighbor != null && neighbor.GetDjikstraColor() != HexCell.DjikstraColor.black && !neighbor.GetIsOccupied())
 			{
 				// Calculate the potential new cost of the neighbor
 				int newCost = activeCell.GetDjikstraCost() + neighbor.GetMoveCost();

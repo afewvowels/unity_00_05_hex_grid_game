@@ -105,6 +105,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed507611934f62d4c8dc28deddf6cf55, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hexGridPosition: 0
-  CurrentHexID: 0
-  DestinationHexID: 0
+  isActive: 0
+  currentHexID: 0
+  destinationHexID: 0
+  path: []
+  ring: {fileID: 4495552140406347927, guid: 85373b8049e90ce42aead13f495f0705, type: 3}

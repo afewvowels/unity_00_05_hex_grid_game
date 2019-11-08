@@ -6,13 +6,26 @@ public class UnitSpawnRandom : MonoBehaviour
 
 	private HexGrid hexGrid;
 
+	private UnitList unitList;
+
 	// Start is called before the first frame update
 	void Start()
 	{
 		hexGrid = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>();
+		unitList = this.GetComponent<UnitList>();
+	}
+
+	public void RandomSpawnUnit()
+	{
 		HexCell location = hexGrid.GetRandomHexCell();
-		go.GetComponent<UnitInfo>().SetCurrentHexID(location.GetCellID());
-		go.GetComponent<UnitInfo>().SetDestinationHexID(location.GetCellID());
-		Instantiate(go, location.transform.position, new Quaternion(0.0f, Random.Range(0.0f, 360.0f), 0.0f, 0.0f));
+		if (!location.GetIsOccupied())
+		{
+			go.GetComponent<UnitInfo>().SetCurrentHexID(location.GetCellID());
+			go.GetComponent<UnitInfo>().SetDestinationHexID(location.GetCellID());
+			location.SetIsOccupied(true);
+			GameObject temp = (GameObject)Instantiate(go, location.transform.position, new Quaternion(0.0f, Random.Range(0.0f, 360.0f), 0.0f, 0.0f));
+			unitList.AddUnit(temp);
+			hexGrid.GetHexCellByID(go.GetComponent<UnitInfo>().GetCurrentHexID()).SetIsOccupied(true);
+		}
 	}
 }
