@@ -24,26 +24,35 @@ public class HexCell : MonoBehaviour
 	[SerializeField]
 	int moveCost;
 
-    [SerializeField]
-    HexCell[] neighbors;
+	[SerializeField]
+	HexCell[] neighbors;
 
-    [SerializeField]
-    private int elevation;
+	[SerializeField]
+	private int elevation;
 
-    public int Elevation
-    {
-        get
-        {
-            return elevation;
-        }
-        set
-        {
-            elevation = value;
-            Vector3 position = transform.localPosition;
-            position.y = value * HexDefinition.elevationStep;
-            transform.localPosition = position;
-        }
-    }
+	public int Elevation
+	{
+		get
+		{
+			return elevation;
+		}
+		set
+		{
+			elevation = value;
+			Vector3 position = transform.localPosition;
+			position.y = value * HexDefinition.elevationStep;
+			position.y += (HexDefinition.SampleNoise(position).y * 2.0f - 1.0f) * HexDefinition.elevationDisplacementStrength;
+			transform.localPosition = position;
+		}
+	}
+
+	public Vector3 Position
+	{
+		get
+		{
+			return transform.localPosition;
+		}
+	}
 
 	public enum DjikstraColor { white, grey, black };
 
@@ -169,15 +178,15 @@ public class HexCell : MonoBehaviour
 	public void SetIsOccupied(bool isOccupied)
 	{
 		this.isOccupied = isOccupied;
-    }
+	}
 
-    public HexDefinition.HexEdgeType GetEdgeType(HexDirection direction)
-    {
-        return HexDefinition.GetEdgeType(elevation, neighbors[(int)direction].elevation);
-    }
+	public HexDefinition.HexEdgeType GetEdgeType(HexDirection direction)
+	{
+		return HexDefinition.GetEdgeType(elevation, neighbors[(int)direction].elevation);
+	}
 
-    public HexDefinition.HexEdgeType GetEdgeType(HexCell otherCell)
-    {
-        return HexDefinition.GetEdgeType(elevation, otherCell.elevation);
-    }
+	public HexDefinition.HexEdgeType GetEdgeType(HexCell otherCell)
+	{
+		return HexDefinition.GetEdgeType(elevation, otherCell.elevation);
+	}
 }

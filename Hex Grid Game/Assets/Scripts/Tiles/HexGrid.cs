@@ -26,8 +26,11 @@ public class HexGrid : MonoBehaviour
 
 	public GameObject player;
 
+	public Texture2D noiseSource;
+
 	private void Awake()
 	{
+		HexDefinition.noiseSource = noiseSource;
 		InitializeHexGrid();
 	}
 
@@ -39,6 +42,11 @@ public class HexGrid : MonoBehaviour
 		path = new List<HexCell>();
 		pathIndexes = new List<int>();
 		//Instantiate(player, this.GetRandomHexCell().transform.position, new Quaternion(0.0f, 0.0f, 0.0f, 0.0f));
+	}
+
+	private void OnEnable()
+	{
+		HexDefinition.noiseSource = noiseSource;
 	}
 
 	public HexCell GetHexCellByID(int id)
@@ -104,6 +112,8 @@ public class HexGrid : MonoBehaviour
 				}
 			}
 		}
+
+		cell.Elevation = 0;
 
 		//CreateLabel(x, z, position, cell);
 	}
