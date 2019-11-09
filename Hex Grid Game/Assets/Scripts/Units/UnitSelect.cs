@@ -6,10 +6,15 @@ public class UnitSelect : MonoBehaviour
 
 	private UnitList unitList;
 
+    private UnitMoveActive unitMoveActive;
+
+    private bool isUnitMoving;
+
 	private void Awake()
 	{
 		hexGrid = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>();
 		unitList = this.GetComponent<UnitList>();
+        unitMoveActive = this.GetComponent<UnitMoveActive>();
 	}
 
 	private void FixedUpdate()
@@ -26,7 +31,7 @@ public class UnitSelect : MonoBehaviour
 		RaycastHit hit;
 		if (Physics.Raycast(inputRay, out hit))
 		{
-			if (hit.collider.gameObject.CompareTag("player"))
+			if (hit.collider.gameObject.CompareTag("player") && !unitMoveActive.GetIsMoving())
 			{
 				Debug.Log("clicked object");
 				foreach (GameObject unit in unitList.GetUnits())

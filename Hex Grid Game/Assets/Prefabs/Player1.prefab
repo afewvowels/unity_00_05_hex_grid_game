@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 4057283426175460345}
   - component: {fileID: 3703202095047058903}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: Player1
   m_TagString: player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -109,4 +109,5 @@ MonoBehaviour:
   currentHexID: 0
   destinationHexID: 0
   path: []
+  movePoints: 0
   ring: {fileID: 4495552140406347927, guid: 85373b8049e90ce42aead13f495f0705, type: 3}

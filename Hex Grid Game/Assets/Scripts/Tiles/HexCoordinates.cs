@@ -20,7 +20,6 @@ public class HexCoordinates
 			return -X - Z;
 		}
 	}
-
 	public int Z
 	{
 		get

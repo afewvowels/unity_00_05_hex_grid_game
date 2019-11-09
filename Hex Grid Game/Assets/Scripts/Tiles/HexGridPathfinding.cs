@@ -6,6 +6,9 @@ public class HexGridPathfinding : MonoBehaviour
 {
 	private HexGrid hexGrid;
 
+    [SerializeField]
+    private HexCell start, destination;
+
 	[SerializeField]
 	private List<HexCell> pathHexes;
 
@@ -14,10 +17,10 @@ public class HexGridPathfinding : MonoBehaviour
 
 	private bool isFound;
 
-	void Awake()
-	{
-		hexGrid = GetComponent<HexGrid>();
-	}
+    void Awake()
+    {
+        hexGrid = GetComponent<HexGrid>();
+    }
 
 	public void ResetPathing()
 	{
@@ -36,11 +39,11 @@ public class HexGridPathfinding : MonoBehaviour
 		isFound = false;
 	}
 
-	public void SetStartCell(int startCellID)
+	public void SetStartCell(HexCell start)
 	{
 		sortedPathHexes.Clear();
-		hexGrid.GetHexCellByID(startCellID).SetOrigin();
-		sortedPathHexes.Add(hexGrid.GetHexCellByID(startCellID));
+		start.SetOrigin();
+		sortedPathHexes.Add(start);
 	}
 
 	public void FindPath(HexCell destination)

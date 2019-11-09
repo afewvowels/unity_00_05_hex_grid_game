@@ -28,6 +28,6 @@ public class AlignCamera : MonoBehaviour
 
 		this.transform.position = hexMesh.bounds.center;
 
-		GameObject.FindGameObjectWithTag("MainCamera").transform.position = new Vector3(hexMesh.bounds.center.x, hexMesh.bounds.center.x * 2.0f, hexMesh.bounds.center.z);
-	}
+        GameObject.FindGameObjectWithTag("MainCamera").transform.position = new Vector3(hexMesh.bounds.center.x, hexMesh.bounds.center.x, -hexMesh.bounds.center.x / 2.0f);
+    }
 }

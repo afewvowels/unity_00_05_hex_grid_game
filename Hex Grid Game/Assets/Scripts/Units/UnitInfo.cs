@@ -21,6 +21,8 @@ public class UnitInfo : MonoBehaviour
 	[SerializeField]
 	private int movePoints;
 
+    [SerializeField]
+    private string player;
 
 	public GameObject ring;
 	private GameObject ringInstance;
@@ -31,33 +33,6 @@ public class UnitInfo : MonoBehaviour
 		hexGridPathfinding = hexGrid.GetComponent<HexGridPathfinding>();
 		SetIsActive(false);
 		movePoints = 10;
-	}
-
-	private void FixedUpdate()
-	{
-		if (isActive && Input.GetMouseButtonDown(0))
-		{
-			SelectDestination();
-		}
-		else if (currentHexID != destinationHexID)
-		{
-			MoveUnit();
-		}
-	}
-
-	public void SelectDestination()
-	{
-		Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
-		RaycastHit hit;
-		if (currentHexID == destinationHexID && Physics.Raycast(inputRay, out hit))
-		{
-			HexCell destination = hexGrid.GetClickedCell(hit.point);
-			hexGridPathfinding.SetStartCell(currentHexID);
-			hexGridPathfinding.FindPath(destination);
-			hexGridPathfinding.BuildHexPathList(destination);
-			destinationHexID = destination.GetCellID();
-			path = hexGridPathfinding.GetHexPathList();
-		}
 	}
 
 	public int GetCurrentHexID()
@@ -96,32 +71,6 @@ public class UnitInfo : MonoBehaviour
 		else if (!this.isActive)
 		{
 			DeselectUnit();
-		}
-	}
-
-	private void MoveUnit()
-	{
-		if (path.Count > 0)
-		{
-			HexCell target = path[path.Count - 1];
-
-			this.transform.LookAt(target.transform.position);
-
-			float distance = Vector3.Distance(this.transform.position, target.transform.position);
-
-			if (Mathf.Abs(distance) > 0.5f)
-			{
-				this.transform.position += this.transform.forward * 0.5f;
-			}
-			else if (Mathf.Abs(distance) <= 0.5f)
-			{
-				path.RemoveAt(path.Count - 1);
-			}
-		}
-		else
-		{
-			currentHexID = destinationHexID;
-			hexGrid.ResetGrid();
 		}
 	}
 

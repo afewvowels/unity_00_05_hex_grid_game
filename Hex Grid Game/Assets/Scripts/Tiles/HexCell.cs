@@ -24,6 +24,27 @@ public class HexCell : MonoBehaviour
 	[SerializeField]
 	int moveCost;
 
+    [SerializeField]
+    HexCell[] neighbors;
+
+    [SerializeField]
+    private int elevation;
+
+    public int Elevation
+    {
+        get
+        {
+            return elevation;
+        }
+        set
+        {
+            elevation = value;
+            Vector3 position = transform.localPosition;
+            position.y = value * HexDefinition.elevationStep;
+            transform.localPosition = position;
+        }
+    }
+
 	public enum DjikstraColor { white, grey, black };
 
 	private void Awake()
@@ -37,9 +58,6 @@ public class HexCell : MonoBehaviour
 		SetColor();
 		SetIsOccupied(false);
 	}
-
-	[SerializeField]
-	HexCell[] neighbors;
 
 	public void SetColor()
 	{
@@ -151,5 +169,15 @@ public class HexCell : MonoBehaviour
 	public void SetIsOccupied(bool isOccupied)
 	{
 		this.isOccupied = isOccupied;
-	}
+    }
+
+    public HexDefinition.HexEdgeType GetEdgeType(HexDirection direction)
+    {
+        return HexDefinition.GetEdgeType(elevation, neighbors[(int)direction].elevation);
+    }
+
+    public HexDefinition.HexEdgeType GetEdgeType(HexCell otherCell)
+    {
+        return HexDefinition.GetEdgeType(elevation, otherCell.elevation);
+    }
 }
