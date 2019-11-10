@@ -3,7 +3,7 @@
 public class AlignCamera : MonoBehaviour
 {
 	private GameObject hexGrid;
-	private Collider hexMesh;
+	private Collider[] hexMesh;
 
 	private bool isCamPositioned;
 	// Start is called before the first frame update
@@ -24,10 +24,17 @@ public class AlignCamera : MonoBehaviour
 	void PlaceCamera()
 	{
 		hexGrid = GameObject.FindGameObjectWithTag("hexgrid");
-		hexMesh = hexGrid.GetComponentInChildren<Collider>();
+		hexMesh = hexGrid.GetComponentsInChildren<Collider>();
 
-		this.transform.position = hexMesh.bounds.center;
+        Bounds gridBounds = new Bounds(transform.position, Vector3.one);
 
-        GameObject.FindGameObjectWithTag("MainCamera").transform.position = new Vector3(hexMesh.bounds.center.x, hexMesh.bounds.center.x, -hexMesh.bounds.center.x / 2.0f);
+        foreach (Collider bound in hexMesh)
+        {
+            gridBounds.Encapsulate(bound.bounds);
+        }
+         
+		this.transform.position = gridBounds.center;
+
+        GameObject.FindGameObjectWithTag("MainCamera").transform.position = new Vector3(gridBounds.center.x, gridBounds.center.x, -gridBounds.center.x / 2.0f);
     }
 }

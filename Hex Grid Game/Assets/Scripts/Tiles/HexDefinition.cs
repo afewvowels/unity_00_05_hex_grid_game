@@ -2,10 +2,13 @@
 
 public static class HexDefinition
 {
-	public const float outerRadius = 10.0f;
-	public const float innerRadius = outerRadius * 0.866025404f;
+    public const float outerToInner = 0.866025404f;
+    public const float innerToOuter = 1.0f / outerToInner;
 
-	public const float solidFactor = 0.75f;
+    public const float outerRadius = 10.0f;
+	public const float innerRadius = outerRadius * outerToInner;
+
+	public const float solidFactor = 0.8f;
 	public const float blendFactor = 1.0f - solidFactor;
 
 	public const float elevationStep = 2.0f;
@@ -22,15 +25,23 @@ public static class HexDefinition
 	public const float noiseScale = 0.003f;
 	public const float elevationDisplacementStrength = 1.5f;
 
-	public enum HexEdgeType
+    public const int chunkSizeX = 5;
+    public const int chunkSizeZ = 5;
+
+    public const float streamBedElevationOffset = -1.75f;
+
+    //public const float riverSurfaceElevationOffset = -0.5f;
+    public const float waterElevationOffset = -0.5f;
+
+    public enum HexEdgeType
 	{
 		Flat,
 		Slope,
 		Cliff
-	}
+    }
 
-	public static Vector3[] corners =
-{
+    public static Vector3[] corners =
+    {
 		new Vector3(0.0f, 0.0f, outerRadius),
 		new Vector3(innerRadius, 0.0f, 0.5f * outerRadius),
 		new Vector3(innerRadius, 0.0f, 0.5f * -outerRadius),
@@ -102,4 +113,26 @@ public static class HexDefinition
 			position.z * noiseScale
 		);
 	}
+
+    public static Vector3 GetSolidEdgeMiddle(HexDirection direction)
+    {
+        return
+            (corners[(int)direction] + corners[(int)direction + 1]) *
+            (0.5f * solidFactor);
+    }
+
+    public static Vector3 Displace(Vector3 position)
+    {
+        Vector4 sample = HexDefinition.SampleNoise(position);
+
+        position.x += NormalizeDisplace(sample.x);
+        position.z += NormalizeDisplace(sample.z);
+
+        return position;
+    }
+
+    public static float NormalizeDisplace(float input)
+    {
+        return ((input * 2.0f) - 1.0f) * cellDisplacementStrength;
+    }
 }
