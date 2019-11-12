@@ -26,15 +26,26 @@ public class HexMapCamera : MonoBehaviour
 
     public HexGrid hexGrid;
 
+    static HexMapCamera instance;
+
+    public static bool Locked
+    {
+        set
+        {
+            instance.enabled = !value;
+        }
+    }
+
     private void Awake()
     {
+        instance = this;
         swivel = transform.GetChild(0);
         stick = transform.GetChild(0);
 
         float posX = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>().GetSizeX();
         float posZ = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>().GetSizeZ();
 
-        this.transform.position = new Vector3(posX * 2.0f, 50.0f, posZ);
+        this.transform.position = new Vector3(posX, 50.0f, 0.0f);
     }
 
     private void FixedUpdate()
@@ -86,13 +97,13 @@ public class HexMapCamera : MonoBehaviour
     private Vector3 ClampPosition(Vector3 position)
     {
         float xMax =
-            (hexGrid.chunkCountX * HexDefinition.chunkSizeX - 0.5f) *
+            (hexGrid.cellCountX - 0.5f) *
             (2.0f * HexDefinition.innerRadius);
         position.x = Mathf.Clamp(position.x, 0.0f, xMax);
 
         float zMax =
-            (hexGrid.chunkCountZ * HexDefinition.chunkSizeZ - 1.0f) *
-            (2.0f * HexDefinition.outerRadius);
+            (hexGrid.cellCountZ - 1.0f) *
+            (1.5f * HexDefinition.outerRadius);
         position.z = Mathf.Clamp(position.z, 0.0f, zMax);
 
         return position;
@@ -111,5 +122,10 @@ public class HexMapCamera : MonoBehaviour
         }
 
         transform.localRotation = Quaternion.Euler(0.0f, rotationAngle, 0.0f);
+    }
+
+    public static void ValidatePosition()
+    {
+        instance.AdjustPosition(0.0f, 0.0f);
     }
 }

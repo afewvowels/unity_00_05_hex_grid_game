@@ -1,20 +1,16 @@
 ﻿using UnityEngine;
 using UnityEngine.EventSystems;
+using System.IO;
 
 public class HexMapEditor : MonoBehaviour
 {
-	public Color[] colors;
-
 	public HexGrid hexGrid;
-
-	private Color activeColor;
 
 	public GameObject player;
 
     public int activeElevation;
     public int activeWaterLevel;
 
-    private bool applyColor;
     private bool applyElevation = true;
     private bool applyWaterLevel = true;
     private bool isDrag;
@@ -25,6 +21,13 @@ public class HexMapEditor : MonoBehaviour
 
     private int brushSize;
 
+    private int activeTerrainTypeIndex;
+
+    public Material terrainMaterial;
+
+    [SerializeField]
+    private bool editMode;
+
     private enum OptionalToggle
     {
         Ignore, Yes, No
@@ -32,12 +35,13 @@ public class HexMapEditor : MonoBehaviour
 
     private OptionalToggle riverMode, roadMode;
 
-	private void Awake()
-	{
-		SelectColor(0);
-	}
+    private void Awake()
+    {
+        terrainMaterial.DisableKeyword("GRID_ON");
+        SetEditMode(true);
+    }
 
-	private void FixedUpdate()
+    private void FixedUpdate()
 	{
 		if (Input.GetMouseButton(0) && !EventSystem.current.IsPointerOverGameObject())
 		{
@@ -49,14 +53,22 @@ public class HexMapEditor : MonoBehaviour
         }
 	}
 
-	public void SelectColor(int index)
-	{
-        applyColor = (index >= 0);
-        if (applyColor)
+    public void ShowGrid (bool visible)
+    {
+        if (visible)
         {
-            activeColor = colors[index];
+            terrainMaterial.EnableKeyword("GRID_ON");
         }
-	}
+        else
+        {
+            terrainMaterial.DisableKeyword("GRID_ON");
+        }
+    }
+
+    public void SetTerrainTypeIndex(int index)
+    {
+        activeTerrainTypeIndex = index;
+    }
 
     public void SetElevation(float elevation)
     {
@@ -78,7 +90,10 @@ public class HexMapEditor : MonoBehaviour
             {
                 isDrag = false;
             }
-            EditCells(currentCell);
+            if (editMode)
+            {
+                EditCells(currentCell);
+            }
             previousCell = currentCell;
 		}
         else
@@ -113,9 +128,9 @@ public class HexMapEditor : MonoBehaviour
     {
         if(cell)
         {
-            if (applyColor)
+            if (activeTerrainTypeIndex >= 0)
             {
-                cell.Color = activeColor;
+                cell.TerrainTypeIndex = activeTerrainTypeIndex;
             }
 
             if (applyElevation)
@@ -201,5 +216,10 @@ public class HexMapEditor : MonoBehaviour
     public void SetWaterLevel(float level)
     {
         activeWaterLevel = (int)level;
+    }
+
+    public void SetEditMode (bool toggle)
+    {
+        editMode = toggle;
     }
 }

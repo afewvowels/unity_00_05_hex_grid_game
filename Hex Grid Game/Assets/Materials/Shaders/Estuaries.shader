@@ -1,4 +1,4 @@
-﻿Shader "Custom/WaterShore2"
+﻿Shader "Custom/Estuaries"
 {
     Properties
     {
@@ -9,21 +9,25 @@
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque" "Queue"="Transparent" }
         LOD 200
 
         CGPROGRAM
         // Physically based Standard lighting model, and enable shadows on all light types
-        #pragma surface surf Standard fullforwardshadows
+        #pragma surface surf Standard alpha vertex:vert
 
         // Use shader model 3.0 target, to get nicer looking lighting
         #pragma target 3.0
+
+        #include "Water.cginc"
 
         sampler2D _MainTex;
 
         struct Input
         {
             float2 uv_MainTex;
+            float2 riverUV;
+            float3 worldPos;
         };
 
         half _Glossiness;
@@ -37,14 +41,27 @@
             // put more per-instance properties here
         UNITY_INSTANCING_BUFFER_END(Props)
 
+        void vert (inout appdata_full v, out Input o)
+        {
+            UNITY_INITIALIZE_OUTPUT(Input, o);
+            o.riverUV = v.texcoord1.xy;
+        }
+
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
             float shore = IN.uv_MainTex.y;
+            float foam = Foam(shore, IN.worldPos.xz, _MainTex);
+            float waves = Waves(IN.worldPos.xz, _MainTex);
+            waves *= 1 - shore;
 
-            float foam = shore;
+            float shoreWater = max(foam, waves);
+
+            float river = River(IN.riverUV, _MainTex);
+
+            float water = lerp(shoreWater, river, IN.uv_MainTex.x);
 
             // Albedo comes from a texture tinted by color
-            fixed4 c = saturate(_Color + foam);
+            fixed4 c = saturate(_Color + water);
             o.Albedo = c.rgb;
             // Metallic and smoothness come from slider variables
             o.Metallic = _Metallic;

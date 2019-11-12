@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.IO;
 
 public class HexCell : MonoBehaviour
 {
@@ -6,11 +7,13 @@ public class HexCell : MonoBehaviour
 
     public HexCoordinates coordinates;
 
-	public Color hexColor;
+    [SerializeField]
+    private int terrainTypeIndex;
 
 	private bool isOccupied;
 
 	public int startCellID;
+    private int distance;
 
 	[SerializeField]
 	private DjikstraColor color;
@@ -46,6 +49,18 @@ public class HexCell : MonoBehaviour
     [SerializeField]
     private HexDirection incomingRiverDirection, outgoingRiverDirection;
 
+    public int Distance
+    {
+        get
+        {
+            return distance;
+        }
+        set
+        {
+            distance = value;
+        }
+    }
+
 	public int Elevation
 	{
 		get
@@ -59,25 +74,9 @@ public class HexCell : MonoBehaviour
                 return;
             }
 			elevation = value;
-			Vector3 position = transform.localPosition;
-			position.y = value * HexDefinition.elevationStep;
-			position.y += (HexDefinition.SampleNoise(position).y * 2.0f - 1.0f) * HexDefinition.elevationDisplacementStrength;
-			transform.localPosition = position;
 
-            if(
-                hasOutgoingRiver &&
-                elevation < GetNeighbor(outgoingRiverDirection).elevation
-                )
-            {
-                RemoveOutgoingRiver();
-            }
-            if (
-                hasIncomingRiver &&
-                elevation > GetNeighbor(incomingRiverDirection).elevation
-                )
-            {
-                RemoveIncomingRiver();
-            }
+            RefreshPosition();
+            ValidateRivers();
 
             for (int i = 0; i < roads.Length; i++)
             {
@@ -91,20 +90,19 @@ public class HexCell : MonoBehaviour
 		}
 	}
 
-    public Color Color
+    public int TerrainTypeIndex
     {
         get
         {
-            return hexColor;
+            return terrainTypeIndex;
         }
         set
         {
-            if (hexColor == value)
+            if (terrainTypeIndex != value)
             {
-                return;
+                terrainTypeIndex = value;
+                Refresh();
             }
-            hexColor = value;
-            Refresh();
         }
     }
 
@@ -226,6 +224,7 @@ public class HexCell : MonoBehaviour
                 return;
             }
             waterLevel = value;
+            ValidateRivers();
             Refresh();
         }
     }
@@ -246,31 +245,16 @@ public class HexCell : MonoBehaviour
 		{
 			moveCost = 100;
 		}
-		SetColor();
-		SetIsOccupied(false);
+        SetIsOccupied(false);
 	}
 
-	public void SetColor()
-	{
-		switch (moveCost)
-		{
-			case 1:
-				this.hexColor = Color.blue;
-				break;
-			case 2:
-				this.hexColor = Color.green;
-				break;
-			case 3:
-				this.hexColor = Color.yellow;
-				break;
-			case 100:
-				this.hexColor = Color.red;
-				break;
-			default:
-				this.hexColor = Color.black;
-				break;
-		}
-	}
+    public void RefreshPosition()
+    {
+        Vector3 position = transform.localPosition;
+        position.y = elevation * HexDefinition.elevationStep;
+        position.y += (HexDefinition.SampleNoise(position).y * 2.0f - 1.0f) * HexDefinition.elevationDisplacementStrength;
+        transform.localPosition = position;
+    }
 
 	public HexCell GetNeighbor(HexDirection direction)
 	{
@@ -430,7 +414,7 @@ public class HexCell : MonoBehaviour
         }
 
         HexCell neighbor = GetNeighbor(direction);
-        if (!neighbor || elevation < neighbor.elevation)
+        if (!IsValidRiverDestination(neighbor))
         {
             return;
         }
@@ -502,5 +486,109 @@ public class HexCell : MonoBehaviour
     {
         int difference = elevation - GetNeighbor(direction).elevation;
         return difference >= 0 ? difference : -difference;
+    }
+
+    private bool IsValidRiverDestination (HexCell neighbor)
+    {
+        return neighbor && (
+            elevation >= neighbor.elevation || waterLevel == neighbor.elevation);
+    }
+
+    private void ValidateRivers()
+    {
+        if(
+            hasOutgoingRiver &&
+            !IsValidRiverDestination(GetNeighbor(outgoingRiverDirection)))
+        {
+            RemoveOutgoingRiver();
+        }
+        if(
+            hasIncomingRiver &&
+            !GetNeighbor(incomingRiverDirection).IsValidRiverDestination(this)
+            )
+        {
+            RemoveIncomingRiver();
+        }
+    }
+
+    public void Save (BinaryWriter writer)
+    {
+        writer.Write((byte)terrainTypeIndex);
+        writer.Write((byte)elevation);
+        writer.Write((byte)waterLevel);
+
+        if (hasIncomingRiver)
+        {
+            writer.Write((byte)incomingRiverDirection + 128);
+        }
+        else
+        {
+            writer.Write((byte)0);
+        }
+
+        if (hasOutgoingRiver)
+        {
+            writer.Write((byte)outgoingRiverDirection + 128);
+        }
+        else
+        {
+            writer.Write((byte)0);
+        }
+
+        int roadFlags = 0;
+        for (int i = 0; i < roads.Length; i++)
+        {
+            if (roads[i])
+            {
+                roadFlags |= 1 << i;
+            }
+        }
+
+        writer.Write((byte)roadFlags);
+    }
+
+    public void Load (BinaryReader reader)
+    {
+        terrainTypeIndex = reader.ReadByte();
+        elevation = reader.ReadByte();
+        RefreshPosition();
+        waterLevel = reader.ReadByte();
+
+        byte riverData = reader.ReadByte();
+        if (riverData >= 128)
+        {
+            hasIncomingRiver = true;
+            incomingRiverDirection = (HexDirection)(riverData - 128);
+        }
+        else
+        {
+            hasIncomingRiver = false;
+        }
+
+        riverData = reader.ReadByte();
+        if (riverData >= 128)
+        {
+            hasOutgoingRiver = true;
+            outgoingRiverDirection = (HexDirection)riverData - 128;
+        }
+        else
+        {
+            hasOutgoingRiver = false;
+        }
+
+        int roadFlags = reader.ReadByte();
+
+        for (int i = 0; i < roads.Length; i++)
+        {
+            roads[i] = (roadFlags & (1 << i)) != 0;
+        }
+    }
+
+    public void FindDistanceTo (HexCell cell)
+    {
+        //for (int i = 0; i < cells.Length; i++)
+        //{
+        //    cells[i].Distance = 0;
+        //}
     }
 }

@@ -33,6 +33,10 @@ public static class HexDefinition
     //public const float riverSurfaceElevationOffset = -0.5f;
     public const float waterElevationOffset = -0.5f;
 
+    public const float waterFactor = 0.6f;
+
+    public const float waterBlendFactor = 1.0f - waterFactor;
+
     public enum HexEdgeType
 	{
 		Flat,
@@ -134,5 +138,20 @@ public static class HexDefinition
     public static float NormalizeDisplace(float input)
     {
         return ((input * 2.0f) - 1.0f) * cellDisplacementStrength;
+    }
+
+    public static Vector3 GetFirstWaterCorner(HexDirection direction)
+    {
+        return corners[(int)direction] * waterFactor;
+    }
+
+    public static Vector3 GetSecondWaterCorner(HexDirection direction)
+    {
+        return corners[(int)direction + 1] * waterFactor;
+    }
+
+    public static Vector3 GetWaterBridge(HexDirection direction)
+    {
+        return (corners[(int)direction] + corners[(int)direction + 1]) * waterBlendFactor;
     }
 }

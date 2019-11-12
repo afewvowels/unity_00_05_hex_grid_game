@@ -7,12 +7,14 @@ public class HexMesh : MonoBehaviour
 {
 	Mesh hexMesh;
 	MeshCollider meshCollider;
-	[NonSerialized] List<Vector3> vertices = new List<Vector3>();
+	[NonSerialized] List<Vector3> vertices, terrainTypes = new List<Vector3>();
 	[NonSerialized] List<int> triangles = new List<int>();
     [NonSerialized] List<Vector2> uvs = new List<Vector2>();
+    [NonSerialized] List<Vector2> uv2s = new List<Vector2>();
     [NonSerialized] List<Color> colors = new List<Color>();
 
-    public bool useCollider, useColors, useUVCoordinates;
+    public bool useCollider, useColors, useUVCoordinates, useUV2Coordinates, useTerrainType;
+
 
 	private void Awake()
 	{
@@ -36,6 +38,14 @@ public class HexMesh : MonoBehaviour
         {
             uvs = ListPool<Vector2>.Get();
         }
+        if (useUV2Coordinates)
+        {
+            uv2s = ListPool<Vector2>.Get();
+        }
+        if (useTerrainType)
+        {
+            terrainTypes = ListPool<Vector3>.Get();
+        }
         triangles = ListPool<int>.Get();
     }
 
@@ -52,6 +62,16 @@ public class HexMesh : MonoBehaviour
         {
             hexMesh.SetUVs(0, uvs);
             ListPool<Vector2>.Add(uvs);
+        }
+        if (useUV2Coordinates)
+        {
+            hexMesh.SetUVs(1, uv2s);
+            ListPool<Vector2>.Add(uv2s);
+        }
+        if (useTerrainType)
+        {
+            hexMesh.SetUVs(2, terrainTypes);
+            ListPool<Vector3>.Add(terrainTypes);
         }
         hexMesh.SetTriangles(triangles, 0);
         ListPool<int>.Add(triangles);
@@ -100,20 +120,35 @@ public class HexMesh : MonoBehaviour
 		colors.Add(c3);
 	}
 
-	public void AddQuad(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4)
-	{
-		int vertexIndex = vertices.Count;
-		vertices.Add(HexDefinition.Displace(v1));
-		vertices.Add(HexDefinition.Displace(v2));
-		vertices.Add(HexDefinition.Displace(v3));
-		vertices.Add(HexDefinition.Displace(v4));
-		triangles.Add(vertexIndex);
-		triangles.Add(vertexIndex + 2);
-		triangles.Add(vertexIndex + 1);
-		triangles.Add(vertexIndex + 1);
-		triangles.Add(vertexIndex + 2);
-		triangles.Add(vertexIndex + 3);
-	}
+    public void AddQuad(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4)
+    {
+        int vertexIndex = vertices.Count;
+        vertices.Add(HexDefinition.Displace(v1));
+        vertices.Add(HexDefinition.Displace(v2));
+        vertices.Add(HexDefinition.Displace(v3));
+        vertices.Add(HexDefinition.Displace(v4));
+        triangles.Add(vertexIndex);
+        triangles.Add(vertexIndex + 2);
+        triangles.Add(vertexIndex + 1);
+        triangles.Add(vertexIndex + 1);
+        triangles.Add(vertexIndex + 2);
+        triangles.Add(vertexIndex + 3);
+    }
+
+    public void AddQuadNonDisplaced(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4)
+    {
+        int vertexIndex = vertices.Count;
+        vertices.Add(v1);
+        vertices.Add(v2);
+        vertices.Add(v3);
+        vertices.Add(v4);
+        triangles.Add(vertexIndex);
+        triangles.Add(vertexIndex + 2);
+        triangles.Add(vertexIndex + 1);
+        triangles.Add(vertexIndex + 1);
+        triangles.Add(vertexIndex + 2);
+        triangles.Add(vertexIndex + 3);
+    }
 
     public void AddQuadColor(Color color)
     {
@@ -160,5 +195,43 @@ public class HexMesh : MonoBehaviour
         uvs.Add(new Vector2(uMax, vMin));
         uvs.Add(new Vector2(uMin, vMax));
         uvs.Add(new Vector2(uMax, vMax));
+    }
+
+    public void AddTriangleUV2(Vector2 uv1, Vector2 uv2, Vector2 uv3)
+    {
+        uv2s.Add(uv1);
+        uv2s.Add(uv2);
+        uv2s.Add(uv2);
+    }
+
+    public void AddQuadUV2(Vector2 uv1, Vector2 uv2, Vector2 uv3, Vector2 uv4)
+    {
+        uv2s.Add(uv1);
+        uv2s.Add(uv2);
+        uv2s.Add(uv3);
+        uv2s.Add(uv4);
+    }
+
+    public void AddQuadUV2(float uMin, float uMax, float vMin, float vMax)
+    {
+        uv2s.Add(new Vector2(uMin, vMin));
+        uv2s.Add(new Vector2(uMax, vMin));
+        uv2s.Add(new Vector2(uMin, vMax));
+        uv2s.Add(new Vector2(uMax, vMax));
+    }
+
+    public void AddTriangleTerrainTypes(Vector3 types)
+    {
+        terrainTypes.Add(types);
+        terrainTypes.Add(types);
+        terrainTypes.Add(types);
+    }
+
+    public void AddQuadTerrainTypes(Vector3 types)
+    {
+        terrainTypes.Add(types);
+        terrainTypes.Add(types);
+        terrainTypes.Add(types);
+        terrainTypes.Add(types);
     }
 }

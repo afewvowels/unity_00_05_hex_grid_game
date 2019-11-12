@@ -116,7 +116,6 @@ public class HexGridPathfinding : MonoBehaviour
 
 		foreach (HexCell cell in pathHexes)
 		{
-			cell.hexColor = Color.white;
 		}
 		isFound = false;
 		hexGrid.RedrawGrid();
