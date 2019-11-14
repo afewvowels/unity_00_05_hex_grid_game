@@ -17,7 +17,7 @@ public class SaveLoadMenu : MonoBehaviour
 
     public SaveLoadItem itemPrefab;
 
-    private const int mapFileVersion = 4;
+    private const int mapFileVersion = 5;
 
     public void Open (bool saveMode)
     {

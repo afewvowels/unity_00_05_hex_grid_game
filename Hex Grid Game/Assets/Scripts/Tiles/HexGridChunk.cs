@@ -213,6 +213,15 @@ public class HexGridChunk : MonoBehaviour
         water.AddTriangleCellData(indices, weights1);
 
         Vector3 center2 = neighbor.Position;
+        if (neighbor.ColumnIndex < cell.ColumnIndex - 1)
+        {
+            center2.x += HexDefinition.wrapSize * HexDefinition.innerDiameter;
+        }
+        else if (neighbor.ColumnIndex > cell.ColumnIndex + 1)
+        {
+            center2.x -= HexDefinition.wrapSize * HexDefinition.innerDiameter;
+        }
+
         center2.y = center.y;
         EdgeVertices e2 = new EdgeVertices(
             center2 + HexDefinition.GetSecondSolidCorner(direction.Opposite()),
@@ -241,13 +250,18 @@ public class HexGridChunk : MonoBehaviour
         HexCell nextNeighbor = cell.GetNeighbor(direction.Next());
         if (nextNeighbor != null)
         {
-            Vector3 v3 =
-                nextNeighbor.Position +
-                (
-                    nextNeighbor.IsUnderwater ?
-                    HexDefinition.GetFirstWaterCorner(direction.Previous()) :
-                    HexDefinition.GetFirstSolidCorner(direction.Previous())
-                );
+            Vector3 center3 = nextNeighbor.Position;
+            if (nextNeighbor.ColumnIndex < cell.ColumnIndex - 1)
+            {
+                center3.x += HexDefinition.wrapSize * HexDefinition.innerDiameter;
+            }
+            else if (nextNeighbor.ColumnIndex > cell.ColumnIndex + 1)
+            {
+                center3.x -= HexDefinition.wrapSize * HexDefinition.innerDiameter;
+            }
+            Vector3 v3 = center3 + (nextNeighbor.IsUnderwater ?
+                        HexDefinition.GetFirstWaterCorner(direction.Previous()) :
+                        HexDefinition.GetFirstSolidCorner(direction.Previous()));
             v3.y = center.y;
             waterShore.AddTriangle(e1.v5, e2.v5, v3);
             waterShore.AddTriangleUV(

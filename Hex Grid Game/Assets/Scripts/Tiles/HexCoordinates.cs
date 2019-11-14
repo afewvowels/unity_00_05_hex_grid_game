@@ -31,6 +31,20 @@ public class HexCoordinates
 
 	public HexCoordinates(int x, int z)
 	{
+        if (HexDefinition.Wrapping)
+        {
+            int oX = x + z / 2;
+            if (oX < 0)
+            {
+                x += HexDefinition.wrapSize;
+            }
+            else if (oX >= HexDefinition.wrapSize)
+            {
+                x -= HexDefinition.wrapSize;
+            }
+        }
+
+
 		this.x = x;
 		this.z = z;
 	}
@@ -42,7 +56,7 @@ public class HexCoordinates
 
 	public static HexCoordinates FromPosition(Vector3 position)
 	{
-		float x = position.x / (HexDefinition.innerRadius * 2.0f);
+		float x = position.x / HexDefinition.innerDiameter;
 		float y = -x;
 
 		float offset = position.z / (HexDefinition.outerRadius * 3.0f);
@@ -74,10 +88,39 @@ public class HexCoordinates
 
     public int DistanceTo (HexCoordinates other)
     {
-        return
-            ((x < other.x ? other.x - x : x - other.x) +
-            (Y < other.Y ? other.Y - Y : Y - other.Y) +
-            (z < other.z ? other.z - z : z - other.z)) / 2;
+        //return
+        //    ((x < other.x ? other.x - x : x - other.x) +
+        //    (Y < other.Y ? other.Y - Y : Y - other.Y) +
+        //    (z < other.z ? other.z - z : z - other.z)) / 2;
+
+        int xy =
+            (x < other.x ? other.x - x : x - other.x) +
+            (Y < other.Y ? other.Y - Y : Y - other.Y);
+
+        if (HexDefinition.Wrapping)
+        {
+            other.x += HexDefinition.wrapSize;
+            int xyWrapped =
+                (x < other.x ? other.x - x : x - other.x) +
+                (Y < other.Y ? other.Y - Y : Y - other.Y);
+            if (xyWrapped < xy)
+            {
+                xy = xyWrapped;
+            }
+            else
+            {
+                other.x -= 2 * HexDefinition.wrapSize;
+                xyWrapped =
+                    (x < other.x ? other.x - x : x - other.x) +
+                    (Y < other.Y ? other.Y - Y : Y - other.Y);
+                if (xyWrapped < xy)
+                {
+                    xy = xyWrapped;
+                }
+            }
+        }
+
+        return (xy + (z < other.z ? other.z - z : z - other.z)) / 2;
     }
 
 	public override string ToString()

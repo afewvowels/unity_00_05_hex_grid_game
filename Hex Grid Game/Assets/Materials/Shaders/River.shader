@@ -66,7 +66,7 @@
             o.Albedo = c.rgb * IN.visibility.x;
             o.Specular = _Specular * explored;
             o.Smoothness = _Glossiness;
-            o.Specular = explored;
+            o.Occlusion = explored;
             o.Alpha = c.a * explored;
         }
         ENDCG

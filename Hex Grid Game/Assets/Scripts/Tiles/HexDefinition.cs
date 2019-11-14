@@ -8,6 +8,8 @@ public static class HexDefinition
     public const float outerRadius = 10.0f;
 	public const float innerRadius = outerRadius * outerToInner;
 
+    public const float innerDiameter = innerRadius * 2.0f;
+
 	public const float solidFactor = 0.8f;
 	public const float blendFactor = 1.0f - solidFactor;
 
@@ -48,6 +50,8 @@ public static class HexDefinition
 
     public const float transitionSpeed = 255.0f;
 
+    public static int wrapSize;
+
     private static float[][] featureThresholds =
     {
         new float[] { 0.0f, 0.0f, 0.4f },
@@ -76,6 +80,14 @@ public static class HexDefinition
 		new Vector3(-innerRadius, 0.0f, 0.5f * outerRadius),
 		new Vector3(0.0f, 0.0f, outerRadius)
 	};
+
+    public static bool Wrapping
+    {
+        get
+        {
+            return wrapSize > 0;
+        }
+    }
 
 	public static Vector3 GetFirstCorner(HexDirection direction)
 	{
@@ -143,10 +155,20 @@ public static class HexDefinition
 
 	public static Vector4 SampleNoise (Vector3 position)
 	{
-		return noiseSource.GetPixelBilinear(
+        Vector4 sample =  noiseSource.GetPixelBilinear(
 			position.x * noiseScale,
 			position.z * noiseScale
 		);
+
+        if (Wrapping && position.x < innerDiameter * 1.5f)
+        {
+            Vector4 sample2 = noiseSource.GetPixelBilinear(
+                (position.x + wrapSize * innerDiameter) * noiseScale,
+                position.z * noiseScale);
+            sample = Vector4.Lerp(sample2, sample, position.x * (1.0f / innerDiameter) - 0.5f);
+        }
+
+        return sample;
 	}
 
     public static Vector3 GetSolidEdgeMiddle(HexDirection direction)

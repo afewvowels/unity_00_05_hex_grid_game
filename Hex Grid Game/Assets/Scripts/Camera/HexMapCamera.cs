@@ -42,10 +42,11 @@ public class HexMapCamera : MonoBehaviour
         swivel = transform.GetChild(0);
         stick = transform.GetChild(0);
 
-        float posX = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>().GetSizeX();
-        float posZ = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>().GetSizeZ();
+        //float posX = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>().GetSizeX();
+        //float posZ = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>().GetSizeZ();
 
-        this.transform.position = new Vector3(posX, 50.0f, 0.0f);
+        //this.transform.position = new Vector3(posX, 50.0f, 0.0f);
+        ValidatePosition();
     }
 
     private void FixedUpdate()
@@ -91,14 +92,14 @@ public class HexMapCamera : MonoBehaviour
 
         Vector3 position = transform.localPosition;
         position += direction * distance;
-        transform.localPosition = ClampPosition(position);
+        transform.localPosition = hexGrid.wrapping ? WrapPosition(position) : ClampPosition(position);
     }
 
     private Vector3 ClampPosition(Vector3 position)
     {
         float xMax =
             (hexGrid.cellCountX - 0.5f) *
-            (2.0f * HexDefinition.innerRadius);
+            HexDefinition.innerDiameter;
         position.x = Mathf.Clamp(position.x, 0.0f, xMax);
 
         float zMax =
@@ -130,5 +131,25 @@ public class HexMapCamera : MonoBehaviour
         float posZ = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>().GetSizeZ();
 
         instance.transform.position = new Vector3(posX, posZ / 3.0f, 0.0f);
+    }
+
+    private Vector3 WrapPosition (Vector3 position)
+    {
+        float width = hexGrid.cellCountX * HexDefinition.innerDiameter;
+        while (position.x < 0.0f)
+        {
+            position.x += width;
+        }
+
+        while (position.x > width)
+        {
+            position.x -= width;
+        }
+
+        float zMax = (hexGrid.cellCountZ - 1) * (1.5f * HexDefinition.outerRadius);
+        position.z = Mathf.Clamp(position.z, 0.0f, zMax);
+
+        hexGrid.CenterMap(position.x);
+        return position;
     }
 }

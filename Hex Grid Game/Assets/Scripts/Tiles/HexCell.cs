@@ -70,6 +70,8 @@ public class HexCell : MonoBehaviour
 
     public HexCellShaderData ShaderData { get; set; }
 
+    public int ColumnIndex { get; set; }
+
     public bool IsExplored
     {
         get
@@ -832,5 +834,10 @@ public class HexCell : MonoBehaviour
             visibility = 0;
             ShaderData.RefreshVisibility(this);
         }
+    }
+
+    public void SetMapData (float data)
+    {
+        ShaderData.SetMapData(this, data);
     }
 }
