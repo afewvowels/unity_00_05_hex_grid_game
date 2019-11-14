@@ -37,6 +37,28 @@ public static class HexDefinition
 
     public const float waterBlendFactor = 1.0f - waterFactor;
 
+    public const int hashGridSize = 256;
+    public const float hashGridScale = 0.25f;
+
+    public const float wallHeight = 3.0f;
+    public const float wallThickness = 0.75f;
+    public const float wallTowerThreshold = 0.5f;
+
+    public const float bridgeDesignLength = 7.0f;
+
+    public const float transitionSpeed = 255.0f;
+
+    private static float[][] featureThresholds =
+    {
+        new float[] { 0.0f, 0.0f, 0.4f },
+        new float[] { 0.0f, 0.4f, 0.6f },
+        new float[] { 0.4f, 0.6f, 0.8f }
+    };
+
+    public const float wallElevationOffset = verticalTerraceStepSize;
+
+    private static HexHash[] hashGrid;
+
     public enum HexEdgeType
 	{
 		Flat,
@@ -96,6 +118,15 @@ public static class HexDefinition
 		return Color.Lerp(a, b, h);
 	}
 
+    public static Vector3 WallLerp(Vector3 near, Vector3 far)
+    {
+        near.x += (far.x - near.x) * 0.5f;
+        near.z += (far.z - near.z) * 0.5f;
+        float v = near.y < far.y ? wallElevationOffset : (1.0f - wallElevationOffset);
+        near.y += (far.y - near.y) * v;
+        return near;
+    }
+
 	public static HexEdgeType GetEdgeType(int elevation1, int elevation2)
 	{
 		if (elevation1 == elevation2)
@@ -153,5 +184,48 @@ public static class HexDefinition
     public static Vector3 GetWaterBridge(HexDirection direction)
     {
         return (corners[(int)direction] + corners[(int)direction + 1]) * waterBlendFactor;
+    }
+
+    public static void InitializeHashGrid(int seed)
+    {
+        hashGrid = new HexHash[hashGridSize * hashGridSize];
+        Random.State currentState = Random.state;
+        Random.InitState(seed);
+        for (int i = 0; i < hashGrid.Length; i++)
+        {
+            hashGrid[i] = HexHash.Create();
+        }
+
+        Random.state = currentState;
+    }
+
+    public static HexHash SampleHashGrid (Vector3 position)
+    {
+        int x = (int)(position.x * hashGridScale) % hashGridSize;
+        if (x < 0)
+        {
+            x += hashGridSize;
+        }
+
+        int z = (int)(position.z * hashGridScale) % hashGridSize;
+        if (z < 0)
+        {
+            z += hashGridSize;
+        }
+        return hashGrid[x + z * hashGridSize];
+    }
+
+    public static float[] GetFeatureThresholds(int level)
+    {
+        return featureThresholds[level];
+    }
+
+    public static Vector3 WallThicknessOffset (Vector3 near, Vector3 far)
+    {
+        Vector3 offset;
+        offset.x = far.x - near.x;
+        offset.y = 0.0f;
+        offset.z = far.z - near.z;
+        return offset.normalized * (wallThickness * 0.5f);
     }
 }

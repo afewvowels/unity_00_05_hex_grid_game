@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using UnityEngine;
@@ -15,7 +16,7 @@ public class HexGrid : MonoBehaviour
 	public HexCell cellPrefab;
 	public Text cellLabelPrefab;
 
-	private Canvas gridCanvas;
+	public Canvas gridCanvas;
 	private bool isFound;
 
 	public HexCell[] cells;
@@ -27,15 +28,47 @@ public class HexGrid : MonoBehaviour
 	public List<int> pathIndexes;
 
 	public GameObject player;
+    public GameObject unitsRoot;
 
-	public Texture2D noiseSource;
+    public Texture2D noiseSource;
 
     public HexGridChunk chunkPrefab;
     public HexGridChunk[] chunks;
 
+    private HexCellPriorityQueue searchFringe;
+    private int searchFringePhase;
+
+    private HexCell currentPathFrom, currentPathTo;
+
+    [SerializeField]
+    private bool currentPathExists;
+
+    [SerializeField]
+    private List<HexUnit> units = new List<HexUnit>();
+
+    public HexUnit unitPrefab;
+
+    private HexCellShaderData cellShaderData;
+
+    public HexCellShaderData ShaderData { get; set; }
+
+    public int seed;
+
+    public bool HasPath
+    {
+        get
+        {
+            return currentPathExists;
+        }
+    }
+
 	private void Awake()
 	{
 		HexDefinition.noiseSource = noiseSource;
+        HexDefinition.InitializeHashGrid(seed);
+        HexUnit.unitPrefab = unitPrefab;
+        cellShaderData = gameObject.AddComponent<HexCellShaderData>();
+        cellShaderData.Grid = this;
         CreateMap(cellCountX, cellCountZ);
 	}
 
@@ -45,7 +78,6 @@ public class HexGrid : MonoBehaviour
 		sortedHexes = new List<HexCell>();
 		path = new List<HexCell>();
 		pathIndexes = new List<int>();
-        gridCanvas = GameObject.FindGameObjectWithTag("gridcanvas").GetComponent<Canvas>();
 	}
 
 	private void OnEnable()
@@ -53,6 +85,9 @@ public class HexGrid : MonoBehaviour
         if(!HexDefinition.noiseSource)
         {
             HexDefinition.noiseSource = noiseSource;
+            HexDefinition.InitializeHashGrid(seed);
+            HexUnit.unitPrefab = unitPrefab;
+            ResetVisibility();
         }
 	}
 
@@ -70,6 +105,9 @@ public class HexGrid : MonoBehaviour
         cellCountX = x;
         cellCountZ = z;
 
+        ClearPath();
+        ClearUnits();
+
         if (chunks != null)
         {
             for (int i = 0; i < chunks.Length; i++)
@@ -80,6 +118,11 @@ public class HexGrid : MonoBehaviour
 
         InitializeHexGrid();
         return true;
+    }
+
+    public HexCell GetCellByOffset(int xOffset, int zOffset)
+    {
+        return cells[xOffset + zOffset * cellCountX];
     }
 
 	public HexCell GetHexCellByID(int id)
@@ -113,6 +156,8 @@ public class HexGrid : MonoBehaviour
 	{
         chunkCountX = cellCountX / HexDefinition.chunkSizeX;
         chunkCountZ = cellCountZ / HexDefinition.chunkSizeZ;
+
+        cellShaderData.Initialize(cellCountX, cellCountZ);
 
         CreateChunks();
         CreateCells();
@@ -155,9 +200,13 @@ public class HexGrid : MonoBehaviour
 		HexCell cell = cells[i] = Instantiate<HexCell>(cellPrefab);
 		cell.transform.localPosition = position;
 		cell.coordinates = HexCoordinates.FromOffsetCoordinates(x, z);
+        cell.ShaderData = cellShaderData;
+        cell.Index = i;
+        cell.ShaderData = cellShaderData;
+        cell.Explorable = x > 0 && z > 0 && x < (cellCountX - 1) && z < (cellCountZ - 1);
 		cell.SetCellID(i);
 
-		if (x > 0)
+        if (x > 0)
 		{
 			cell.SetNeighbor(HexDirection.W, cells[i - 1]);
 		}
@@ -179,11 +228,11 @@ public class HexGrid : MonoBehaviour
 					cell.SetNeighbor(HexDirection.SE, cells[i - cellCountX + 1]);
 				}
 			}
-		}
+        }
 
-		cell.Elevation = 0;
+        CreateLabel(x, z, position, cell);
 
-        //CreateLabel(x, z, position, cell);
+        cell.Elevation = 0;
 
         AddCellToChunk(x, z, cell);
 	}
@@ -202,14 +251,16 @@ public class HexGrid : MonoBehaviour
 	void CreateLabel(int x, int z, Vector3 position, HexCell cell)
 	{
 		Text label = Instantiate<Text>(cellLabelPrefab);
-		label.rectTransform.SetParent(gridCanvas.transform, false);
-		label.rectTransform.anchoredPosition =
-			new Vector2(position.x, position.z);
+        label.rectTransform.SetParent(gridCanvas.transform, false);
+        label.rectTransform.anchoredPosition =
+            new Vector2(position.x, position.z);
 
-        //cell.uiRect = label.rectTransform;
+        cell.uiRect = label.rectTransform;
 
-		label.tag = "label";
-	}
+        label.text = null;
+
+        label.tag = "label";
+    }
 
 	public void ColorCell(Vector3 position, Color color)
 	{
@@ -225,6 +276,16 @@ public class HexGrid : MonoBehaviour
 		//hexMesh.Triangulate(cells);
 		Debug.Log("touched at " + coordinates.ToString());
 	}
+
+    public HexCell GetCell(Ray ray)
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(ray, out hit))
+        {
+            return GetClickedCell(hit.point);
+        }
+        return null;
+    }
 
 	public HexCell GetClickedCell(Vector3 position)
 	{
@@ -365,10 +426,19 @@ public class HexGrid : MonoBehaviour
         {
             cells[i].Save(writer);
         }
+
+        writer.Write(units.Count);
+        for (int i = 0; i < units.Count; i++)
+        {
+            units[i].Save(writer);
+        }
     }
 
     public void Load(BinaryReader reader, int header)
     {
+        ClearPath();
+        ClearUnits();
+
         int x = 20;
         int z = 15;
 
@@ -385,14 +455,311 @@ public class HexGrid : MonoBehaviour
                 return;
             }
         }
+
+        bool originalImmediateMode = cellShaderData.ImmediateMode;
+        cellShaderData.ImmediateMode = true;
+
         for (int i = 0; i < cells.Length; i++)
         {
-            cells[i].Load(reader);
+            cells[i].Load(reader, header);
         }
 
         for (int i = 0; i < chunks.Length; i++)
         {
             chunks[i].Refresh();
+        }
+
+        if (header >= 2)
+        {
+            int unitCount = reader.ReadInt32();
+            for (int i = 0; i < unitCount; i++)
+            {
+                HexUnit.Load(reader, this);
+            }
+        }
+
+        cellShaderData.ImmediateMode = originalImmediateMode;
+    }
+
+    public void FindPath(HexCell fromCell, HexCell toCell, int speed)
+    {
+        ClearPath();
+        currentPathFrom = fromCell;
+        currentPathTo = toCell;
+        currentPathExists = Search(fromCell, toCell, speed);
+        ShowPath(speed);
+    }
+
+    bool Search (HexCell fromCell, HexCell toCell, int speed)
+    {
+        searchFringePhase += 2;
+        if (searchFringe == null)
+        {
+            searchFringe = new HexCellPriorityQueue();
+        }
+        else
+        {
+            searchFringe.Clear();
+        }
+
+        fromCell.EnableHighlight(Color.blue);
+
+        fromCell.SearchPhase = searchFringePhase;
+        fromCell.Distance = 0;
+        searchFringe.Enqueue(fromCell);
+
+        while (searchFringe.Count > 0)
+        {
+            HexCell current = searchFringe.Dequeue();
+            current.SearchPhase += 1;
+
+            if (current == toCell)
+            {
+                return true;
+            }
+
+            int currentTurn = (current.Distance - 1) / speed;
+
+            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+            {
+                HexCell neighbor = current.GetNeighbor(d);
+                if (neighbor == null || neighbor.SearchPhase > searchFringePhase)
+                {
+                    continue;
+                }
+                if (neighbor.IsUnderwater || neighbor.Unit)
+                {
+                    continue;
+                }
+
+                HexDefinition.HexEdgeType edgeType = current.GetEdgeType(neighbor);
+
+                if (edgeType == HexDefinition.HexEdgeType.Cliff)
+                {
+                    continue;
+                }
+
+                int moveCost;
+
+                if (current.HasRoadThroughEdge(d))
+                {
+                    moveCost = 1;
+                }
+                else
+                {
+                    moveCost = edgeType == HexDefinition.HexEdgeType.Flat ? 5 : 10;
+                }
+
+                int distance = current.Distance + moveCost;
+                int turn = (distance - 1) / speed;
+                if (turn > currentTurn)
+                {
+                    distance = turn * speed + moveCost;
+                }
+
+                if (neighbor.SearchPhase < searchFringePhase)
+                {
+                    neighbor.SearchPhase = searchFringePhase;
+                    neighbor.Distance = distance;
+                    neighbor.PathFrom = current;
+                    neighbor.SearchHeuristic = neighbor.coordinates.DistanceTo(toCell.coordinates);
+                    searchFringe.Enqueue(neighbor);
+                }
+                else if (distance < neighbor.Distance)
+                {
+                    int oldPriority = neighbor.SearchPriority;
+                    neighbor.Distance = distance;
+                    neighbor.PathFrom = current;
+                    searchFringe.Change(neighbor, oldPriority);
+                }
+            }
+        }
+        return false;
+    }
+
+    private void ShowPath (int speed)
+    {
+        if (currentPathExists)
+        {
+            HexCell current = currentPathTo;
+            while (current != currentPathFrom)
+            {
+                int turn = (current.Distance - 1) / speed;
+                current.SetLabel(turn.ToString());
+                current.EnableHighlight(Color.white);
+                current = current.PathFrom;
+            }
+        }
+        currentPathFrom.EnableHighlight(Color.blue);
+        currentPathTo.EnableHighlight(Color.red);
+    }
+
+    public void ClearPath()
+    {
+        if (currentPathExists)
+        {
+            HexCell current = currentPathTo;
+            while (current != currentPathFrom)
+            {
+                current.SetLabel(null);
+                current.DisableHighlight();
+                current = current.PathFrom;
+            }
+            current.DisableHighlight();
+            currentPathExists = false;
+        }
+        else if (currentPathFrom)
+        {
+            currentPathFrom.DisableHighlight();
+            currentPathTo.DisableHighlight();
+        }
+        currentPathFrom = currentPathTo = null;
+    }
+
+    private void ClearUnits()
+    {
+        for (int i = 0; i < units.Count; i++)
+        {
+            units[i].Die();
+        }
+        units.Clear();
+    }
+
+    public void AddUnit (HexUnit unit, HexCell location, float orientation)
+    {
+        units.Add(unit);
+        unit.Grid = this;
+        unit.transform.SetParent(unitsRoot.transform, false);
+        unit.Location = location;
+        unit.Orientation = orientation;
+    }
+
+    public void RemoveUnit(HexUnit unit)
+    {
+        units.Remove(unit);
+        unit.Die();
+    }
+
+    public void ShowUI (bool visible)
+    {
+        for (int i = 0; i < chunks.Count(); i++)
+        {
+            chunks[i].ShowUI(visible);
+        }
+    }
+
+    public List<HexCell> GetPath()
+    {
+        if (!currentPathExists)
+        {
+            return null;
+        }
+        List<HexCell> currentPath = ListPool<HexCell>.Get();
+        for (HexCell c = currentPathTo; c != currentPathFrom; c = c.PathFrom)
+        {
+            currentPath.Add(c);
+        }
+        currentPath.Add(currentPathFrom);
+        currentPath.Reverse();
+        return currentPath;
+    }
+
+    private List<HexCell> GetVisibleCells (HexCell fromCell, int range)
+    {
+        List<HexCell> visibleCells = ListPool<HexCell>.Get();
+
+        searchFringePhase += 2;
+        if(searchFringe == null)
+        {
+            searchFringe = new HexCellPriorityQueue();
+        }
+        else
+        {
+            searchFringe.Clear();
+        }
+
+        range += fromCell.ViewElevation;
+        fromCell.SearchPhase = searchFringePhase;
+        fromCell.Distance = 0;
+        searchFringe.Enqueue(fromCell);
+
+        HexCoordinates fromCoordinates = fromCell.coordinates;
+        while(searchFringe.Count > 0)
+        {
+            HexCell current = searchFringe.Dequeue();
+            current.SearchPhase += 1;
+            visibleCells.Add(current);
+
+            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+            {
+                HexCell neighbor = current.GetNeighbor(d);
+                if (neighbor == null ||
+                    neighbor.SearchPhase > searchFringePhase ||
+                    !neighbor.Explorable)
+                {
+                    continue;
+                }
+
+                int distance = current.Distance + 1;
+                if (distance + neighbor.ViewElevation > range ||
+                    distance > fromCoordinates.DistanceTo(neighbor.coordinates))
+                {
+                    continue;
+                }
+                if (distance > range)
+                {
+                    continue;
+                }
+
+                if (neighbor.SearchPhase < searchFringePhase)
+                {
+                    neighbor.SearchPhase = searchFringePhase;
+                    neighbor.Distance = distance;
+                    neighbor.SearchHeuristic = 0;
+                    searchFringe.Enqueue(neighbor);
+                }
+                else if (distance < neighbor.Distance)
+                {
+                    int oldPriority = neighbor.SearchPriority;
+                    neighbor.Distance = distance;
+                    searchFringe.Change(neighbor, oldPriority);
+                }
+            }
+        }
+
+        return visibleCells;
+    }
+
+    public void IncreaseVisibility (HexCell fromCell, int range)
+    {
+        List<HexCell> visibleCells = GetVisibleCells(fromCell, range);
+        for (int i = 0; i < visibleCells.Count; i++)
+        {
+            visibleCells[i].IncreaseVisibility();
+        }
+        ListPool<HexCell>.Add(visibleCells);
+    }
+
+    public void DecreaseVisibility (HexCell fromCell, int range)
+    {
+        List<HexCell> visibleCells = GetVisibleCells(fromCell, range);
+        for (int i = 0; i < visibleCells.Count; i++)
+        {
+            visibleCells[i].DecreaseVisibility();
+        }
+        ListPool<HexCell>.Add(visibleCells);
+    }
+
+    public void ResetVisibility()
+    {
+        for (int i = 0; i < cells.Length; i++)
+        {
+            cells[i].ResetVisibility();
+        }
+        for (int i = 0; i < units.Count; i++)
+        {
+            HexUnit unit = units[i];
+            IncreaseVisibility(unit.Location, unit.VisionRange);
         }
     }
 }

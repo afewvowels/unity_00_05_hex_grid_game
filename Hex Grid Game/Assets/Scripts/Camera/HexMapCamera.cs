@@ -126,6 +126,9 @@ public class HexMapCamera : MonoBehaviour
 
     public static void ValidatePosition()
     {
-        instance.AdjustPosition(0.0f, 0.0f);
+        float posX = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>().GetSizeX();
+        float posZ = GameObject.FindGameObjectWithTag("hexgrid").GetComponent<HexGrid>().GetSizeZ();
+
+        instance.transform.position = new Vector3(posX, posZ / 3.0f, 0.0f);
     }
 }

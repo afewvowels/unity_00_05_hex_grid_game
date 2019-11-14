@@ -46,7 +46,8 @@ MonoBehaviour:
   coordinates:
     x: 0
     z: 0
-  hexColor: {r: 0, g: 0, b: 0, a: 0}
+  uiRect: {fileID: 0}
+  terrainTypeIndex: 0
   startCellID: 0
   color: 0
   djikstraCost: 0
@@ -62,6 +63,7 @@ MonoBehaviour:
   - {fileID: 0}
   elevation: -2147483648
   roads: 000000000000
+  waterLevel: -2147483648
   chunk: {fileID: 0}
   incomingRiverDirection: 0
   outgoingRiverDirection: 0

@@ -12,6 +12,7 @@ TagManager:
   - hexgridchunk
   - chunkmesh
   - gridcanvas
+  - featuresroot
   layers:
   - Default
   - TransparentFX

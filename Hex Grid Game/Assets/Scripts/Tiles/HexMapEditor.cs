@@ -7,12 +7,21 @@ public class HexMapEditor : MonoBehaviour
 	public HexGrid hexGrid;
 
 	public GameObject player;
+    public GameObject unitsRoot;
 
     public int activeElevation;
     public int activeWaterLevel;
+    private int activeUrbanLevel;
+    private int activeFarmLevel;
+    private int activePlantLevel;
+    private int activeSpecialIndex;
 
     private bool applyElevation = true;
     private bool applyWaterLevel = true;
+    private bool applyUrbanLevel;
+    private bool applyFarmLevel;
+    private bool applyPlantLevel;
+    private bool applySpecialIndex;
     private bool isDrag;
 
     private HexDirection dragDirection;
@@ -25,32 +34,43 @@ public class HexMapEditor : MonoBehaviour
 
     public Material terrainMaterial;
 
-    [SerializeField]
-    private bool editMode;
-
     private enum OptionalToggle
     {
         Ignore, Yes, No
     }
 
-    private OptionalToggle riverMode, roadMode;
+    private OptionalToggle riverMode, roadMode, walledMode;
 
     private void Awake()
     {
         terrainMaterial.DisableKeyword("GRID_ON");
+        Shader.EnableKeyword("HEX_MAP_EDIT_MODE");
         SetEditMode(true);
     }
 
     private void FixedUpdate()
 	{
-		if (Input.GetMouseButton(0) && !EventSystem.current.IsPointerOverGameObject())
-		{
-			HandleInput();
-		}
-        else
+        if (!EventSystem.current.IsPointerOverGameObject())
         {
-            previousCell = null;
+            if (Input.GetMouseButton(0))
+            {
+                HandleInput();
+                return;
+            }
+            if (Input.GetKeyDown(KeyCode.U))
+            {
+                if (Input.GetKey(KeyCode.LeftShift))
+                {
+                    DestroyUnit();
+                }
+                else
+                {
+                    CreateUnit();
+                }
+                return;
+            }
         }
+        previousCell = null;
 	}
 
     public void ShowGrid (bool visible)
@@ -75,13 +95,17 @@ public class HexMapEditor : MonoBehaviour
         activeElevation = (int)elevation;
     }
 
+    HexCell GetCellUnderCursor()
+    {
+        return hexGrid.GetCell(Camera.main.ScreenPointToRay(Input.mousePosition));
+    }
+
 	void HandleInput()
-	{
-		Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
-		RaycastHit hit;
-		if (Physics.Raycast(inputRay, out hit))
+    {
+        HexCell currentCell = GetCellUnderCursor();
+
+        if (currentCell)
 		{
-            HexCell currentCell = hexGrid.GetClickedCell(hit.point);
             if (previousCell && previousCell != currentCell)
             {
                 ValidateDrag(currentCell);
@@ -90,10 +114,8 @@ public class HexMapEditor : MonoBehaviour
             {
                 isDrag = false;
             }
-            if (editMode)
-            {
-                EditCells(currentCell);
-            }
+            EditCells(currentCell);
+
             previousCell = currentCell;
 		}
         else
@@ -143,13 +165,39 @@ public class HexMapEditor : MonoBehaviour
                 cell.WaterLevel = activeWaterLevel;
             }
 
+            if (applySpecialIndex)
+            {
+                cell.SpecialIndex = activeSpecialIndex;
+            }
+
+            if (applyUrbanLevel)
+            {
+                cell.UrbanLevel = activeUrbanLevel;
+            }
+
+            if (applyFarmLevel)
+            {
+                cell.FarmLevel = activeFarmLevel;
+            }
+
+            if (applyPlantLevel)
+            {
+                cell.PlanetLevel = activePlantLevel;
+            }
+
             if (riverMode == OptionalToggle.No)
             {
                 cell.RemoveRiver();
             }
+
             if (roadMode == OptionalToggle.No)
             {
                 cell.RemoveRoads();
+            }
+
+            if (walledMode != OptionalToggle.Ignore)
+            {
+                cell.Walled = walledMode == OptionalToggle.Yes;
             }
 
             else if (isDrag)
@@ -220,6 +268,69 @@ public class HexMapEditor : MonoBehaviour
 
     public void SetEditMode (bool toggle)
     {
-        editMode = toggle;
+        enabled = toggle;
+    }
+
+    private void CreateUnit()
+    {
+        HexCell cell = GetCellUnderCursor();
+        if (cell && !cell.Unit)
+        {
+            hexGrid.AddUnit(Instantiate(HexUnit.unitPrefab), cell, Random.Range(0.0f, 360.0f));
+        }
+    }
+
+    private void DestroyUnit()
+    {
+        HexCell cell = GetCellUnderCursor();
+        if (cell && cell.Unit)
+        {
+            hexGrid.RemoveUnit(cell.Unit);
+        }
+    }
+
+    public void SetApplyUrbanLevel(bool toggle)
+    {
+        applyUrbanLevel = toggle;
+    }
+
+    public void SetUrbanLevel (float level)
+    {
+        activeUrbanLevel = (int)level;
+    }
+
+    public void SetApplyFarmLevel (bool toggle)
+    {
+        applyFarmLevel = toggle;
+    }
+
+    public void SetFarmLevel (float level)
+    {
+        activeFarmLevel = (int)level;
+    }
+
+    public void SetApplyPlantLevel (bool toggle)
+    {
+        applyPlantLevel = toggle;
+    }
+
+    public void SetPlantLevel (float level)
+    {
+        activePlantLevel = (int)level;
+    }
+
+    public void SetWalledMode (int mode)
+    {
+        walledMode = (OptionalToggle)mode;
+    }
+
+    public void SetApplySpecialIndex(bool toggle)
+    {
+        applySpecialIndex = toggle;
+    }
+
+    public void SetSpecialIndex(float index)
+    {
+        activeSpecialIndex = (int)index;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.IO;
 
 [System.Serializable]
 public class HexCoordinates
@@ -71,6 +72,13 @@ public class HexCoordinates
 		return new HexCoordinates(iX, iZ);
 	}
 
+    public int DistanceTo (HexCoordinates other)
+    {
+        return
+            ((x < other.x ? other.x - x : x - other.x) +
+            (Y < other.Y ? other.Y - Y : Y - other.Y) +
+            (z < other.z ? other.z - z : z - other.z)) / 2;
+    }
 
 	public override string ToString()
 	{
@@ -81,4 +89,18 @@ public class HexCoordinates
 	{
 		return X.ToString() + "\n" + Y.ToString() + "\n" + Z.ToString();
 	}
+
+    public void Save(BinaryWriter writer)
+    {
+        writer.Write(x);
+        writer.Write(z);
+    }
+
+    public static HexCoordinates Load (BinaryReader reader)
+    {
+        int xCoord = reader.ReadInt32();
+        int zCoord = reader.ReadInt32();
+        HexCoordinates c = new HexCoordinates(xCoord, zCoord);
+        return c;
+    }
 }
